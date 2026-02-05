@@ -47,8 +47,9 @@ function auth(req, res, next) {
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
-  } catch {
-    return res.status(401).json({ error: "Token inválido o expirado" });
+  } catch (e) {
+    if (e && e.name === "TokenExpiredError") return res.status(403).json({ error: "Token expirado" });
+    return res.status(401).json({ error: "Token inválido" });
   }
 }
 
