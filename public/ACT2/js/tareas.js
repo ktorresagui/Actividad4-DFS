@@ -9,17 +9,7 @@ const escapeHTML = (str) => {
   return div.innerHTML;
 };
 
-const formatDate = (ts) => {
-  if (!ts) return "---";
-  const d = new Date(ts);
-  const opciones = { day: "2-digit", month: "short", year: "numeric" };
-  return d.toLocaleDateString("es-MX", opciones).replace(/\./g, "").replace(/ /g, "/");
-};
-
-const redirectToIndex = () => {
-  location.replace("/index.html");
-};
-
+const redirectToIndex = () => location.replace("/index.html");
 const getToken = () => localStorage.getItem("token");
 
 const decodeJwtPayload = (token) => {
@@ -43,8 +33,7 @@ const token = getToken();
 if (!token) redirectToIndex();
 
 const payload = decodeJwtPayload(token);
-if (!payload || !payload.username) redirectToIndex();
-if (payload.exp && Date.now() >= payload.exp * 1000) redirectToIndex();
+if (!payload?.username || (payload.exp && Date.now() >= payload.exp * 1000)) redirectToIndex();
 
 const LOGGED_USER = payload.username;
 
@@ -59,11 +48,26 @@ const listaUI = $("#lista-tareas");
 const statTotal = $("#stat-total");
 const statPend = $("#stat-pend");
 const statDone = $("#stat-done");
+const btnAgregar = $("#btn-agregar");
+const btnCancelarEdicion = $("#btn-cancelar-edicion");
+const editId = $("#edit-id");
+
+let tareaEditandoId = null;
 
 if (inputCreado) {
   inputCreado.value = LOGGED_USER;
   inputCreado.readOnly = true;
 }
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "---";
+  const d = new Date(dateStr);
+  const meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = meses[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 class Tarea {
   constructor(
@@ -77,15 +81,17 @@ class Tarea {
     fechaAsignacion = null,
     deadline = null
   ) {
-    this.id = id;
-    this.nombre = nombre;
-    this.descripcion = descripcion;
-    this.creadoPor = creadoPor;
-    this.asignadoA = asignadoA;
-    this.estado = estado;
-    this.fechaCreacion = fechaCreacion;
-    this.fechaAsignacion = fechaAsignacion;
-    this.deadline = deadline;
+    Object.assign(this, {
+      id,
+      nombre,
+      descripcion,
+      creadoPor,
+      asignadoA,
+      estado,
+      fechaCreacion,
+      fechaAsignacion,
+      deadline
+    });
   }
 
   toggle() {
@@ -97,24 +103,31 @@ class GestorDeTareas {
   constructor() {
     this.tareas = [];
     this.filtro = "todas";
-    this.scope = "creadas";
+    this.scope = "todas";
     this.cargar();
   }
 
   agregar(datos) {
-    const asignado = (datos.asignadoA || "").trim();
-    const t = new Tarea(
-      datos.nombre,
-      datos.descripcion,
-      LOGGED_USER,
-      asignado,
-      datos.estado,
-      makeId(),
-      Date.now(),
-      asignado ? Date.now() : null,
-      datos.deadline || null
+    this.tareas.unshift(
+      new Tarea(
+        datos.nombre,
+        datos.descripcion,
+        LOGGED_USER,
+        datos.asignadoA,
+        datos.estado,
+        makeId(),
+        Date.now(),
+        datos.asignadoA ? Date.now() : null,
+        datos.deadline
+      )
     );
-    this.tareas.unshift(t);
+    this.guardar();
+  }
+
+  editar(id, datos) {
+    const t = this.tareas.find((t) => t.id === id);
+    if (!t) return;
+    Object.assign(t, datos);
     this.guardar();
   }
 
@@ -131,7 +144,7 @@ class GestorDeTareas {
 
   filtrarPorScope(arr) {
     if (this.scope === "creadas") return arr.filter((t) => t.creadoPor === LOGGED_USER);
-    if (this.scope === "asignadas") return arr.filter((t) => (t.asignadoA || "").trim() === LOGGED_USER);
+    if (this.scope === "asignadas") return arr.filter((t) => t.asignadoA === LOGGED_USER);
     return arr;
   }
 
@@ -142,15 +155,13 @@ class GestorDeTareas {
   }
 
   obtenerFiltradas() {
-    const porScope = this.filtrarPorScope(this.tareas);
-    return this.filtrarPorEstado(porScope);
+    return this.filtrarPorEstado(this.filtrarPorScope(this.tareas));
   }
 
   statsFiltradas() {
     const base = this.filtrarPorScope(this.tareas);
-    const total = base.length;
     const done = base.filter((t) => t.estado === "completada").length;
-    return { total, done, pend: total - done };
+    return { total: base.length, done, pend: base.length - done };
   }
 
   guardar() {
@@ -160,8 +171,7 @@ class GestorDeTareas {
   cargar() {
     const raw = localStorage.getItem("totalplay_tareas");
     if (raw) {
-      const datos = JSON.parse(raw);
-      this.tareas = datos.map(
+      this.tareas = JSON.parse(raw).map(
         (d) =>
           new Tarea(
             d.nombre,
@@ -185,70 +195,82 @@ const render = () => {
   const filtradas = gestor.obtenerFiltradas();
   const { total, done, pend } = gestor.statsFiltradas();
 
-  statTotal.textContent = total;
-  statDone.textContent = done;
-  statPend.textContent = pend;
+  if (statTotal) statTotal.textContent = total;
+  if (statDone) statDone.textContent = done;
+  if (statPend) statPend.textContent = pend;
 
-  listaUI.innerHTML =
-    filtradas.length > 0
-      ? filtradas
-          .map((t) => {
-            const isOverdue = t.deadline && new Date(t.deadline) < new Date() && t.estado !== "completada";
-            return `
-            <li class="task-item" data-id="${t.id}">
-              <div class="task-left">
-                <div class="task-topline">
-                  <span class="badge ${t.estado === "completada" ? "done" : "todo"}">${t.estado}</span>
-                  <span class="task-name ${t.estado === "completada" ? "is-done" : ""}">${escapeHTML(t.nombre)}</span>
-                </div>
+  listaUI.innerHTML = filtradas.length
+    ? filtradas
+        .map(
+          (t) => `
+      <li class="task-item" data-id="${t.id}">
+        <div class="task-left">
+          <div class="task-topline">
+            <span class="badge ${t.estado === "completada" ? "done" : "todo"}">
+              ${t.estado === "completada" ? "Completada" : "Pendiente"}
+            </span>
+            <span class="task-name ${t.estado === "completada" ? "is-done" : ""}">
+              ${escapeHTML(t.nombre)}
+            </span>
+          </div>
 
-                <div style="margin: 5px 0; font-size: 0.9em; color: #555;">
-                  ${escapeHTML(t.descripcion) || "Sin descripción"}
-                </div>
+          <div class="task-meta" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 20px;">
+              <span>Creado por: <strong>${escapeHTML(t.creadoPor || "---")}</strong></span>
+              <span>Para: <strong>${escapeHTML(t.asignadoA.trim() || "---")}</strong></span>
+              <span>Fecha Creación: <strong>${formatDate(t.fechaCreacion)}</strong></span>
+              <span>Fecha límite: <strong style="color: #e74c3c;">${formatDate(t.deadline)}</strong></span>
+          </div>
 
-                <div class="task-meta" style="font-size: 0.8em; color: #777; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                  <span> Por: ${escapeHTML(t.creadoPor) || "---"}</span>
-                  <span> Para: ${escapeHTML(t.asignadoA) || "---"}</span>
-                  <span style="${isOverdue ? "color: #e74c3c; font-weight: bold;" : ""}"> Límite: ${formatDate(t.deadline)}</span>
-                  <span> Registro: ${formatDate(t.fechaCreacion)}</span>
-                </div>
-              </div>
+          ${t.descripcion ? `<p>${escapeHTML(t.descripcion)}</p>` : ""}
+        </div>
 
-              <div class="task-actions">
-                <button class="icon-btn primary" data-action="toggle">${t.estado === "completada" ? "Reabrir" : "Completar"}</button>
-                <button class="icon-btn danger" data-action="delete">Eliminar</button>
-              </div>
-            </li>`;
-          })
-          .join("")
-      : `<li style="padding: 20px; text-align: center; color: #888;">No hay tareas.</li>`;
+        <div class="task-actions">
+          <button class="icon-btn primary" data-action="toggle">
+            ${t.estado === "completada" ? "Reabrir" : "Completar"}
+          </button>
+          <button class="icon-btn" data-action="edit">Editar</button>
+          <button class="icon-btn danger" data-action="delete">Eliminar</button>
+        </div>
+      </li>
+    `
+        )
+        .join("")
+    : `<li class="task-item"><em>No hay tareas</em></li>`;
 };
 
-const logout = document.getElementById("logoutLink");
-if (logout) {
-  logout.addEventListener("click", (e) => {
-    e.preventDefault();
-    localStorage.removeItem("token");
-    location.replace("../../ACT3/pages/login.html");
-  });
-}
+const resetForm = () => {
+  form.reset();
+  if (inputCreado) inputCreado.value = LOGGED_USER;
+  tareaEditandoId = null;
+  editId.value = "";
+  btnAgregar.textContent = "Agregar Tarea";
+  btnCancelarEdicion.hidden = true;
+};
+
+const handleFilterActive = (clickedBtn) => {
+  const group = clickedBtn.closest('.filters');
+  if (group) {
+    group.querySelectorAll('.chip').forEach(btn => btn.classList.remove('is-active'));
+    clickedBtn.classList.add('is-active');
+  }
+};
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-
-  const nombre = inputNombre.value.trim();
-  if (!nombre) return;
-
-  gestor.agregar({
-    nombre,
+  const datos = {
+    nombre: inputNombre.value.trim(),
     descripcion: inputDesc.value,
-    asignadoA: inputAsignado.value,
+    asignadoA: inputAsignado.value.trim(),
     deadline: inputDeadline.value,
     estado: checkCompletada.checked ? "completada" : "pendiente"
-  });
-
-  form.reset();
-  if (inputCreado) inputCreado.value = LOGGED_USER;
+  };
+  if (!datos.nombre) return;
+  if (tareaEditandoId) {
+    gestor.editar(tareaEditandoId, datos);
+  } else {
+    gestor.agregar(datos);
+  }
+  resetForm();
   render();
 });
 
@@ -256,47 +278,72 @@ listaUI.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
   const li = btn.closest("li");
-  if (!li) return;
-
   const id = li.dataset.id;
-  const action = btn.dataset.action;
 
-  if (action === "toggle") gestor.toggle(id);
-  if (action === "delete") gestor.eliminar(id);
+  if (btn.dataset.action === "edit") {
+    const t = gestor.tareas.find((t) => t.id === id);
+    if (!t) return;
+    inputNombre.value = t.nombre;
+    inputDesc.value = t.descripcion;
+    inputAsignado.value = t.asignadoA;
+    inputDeadline.value = t.deadline;
+    checkCompletada.checked = t.estado === "completada";
+    tareaEditandoId = id;
+    editId.value = id;
+    btnAgregar.textContent = "Guardar cambios";
+    btnCancelarEdicion.hidden = false;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
+  if (btn.dataset.action === "toggle") gestor.toggle(id);
+  if (btn.dataset.action === "delete") gestor.eliminar(id);
   render();
 });
 
-$$(".chip[data-filter]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    $$(".chip[data-filter]").forEach((b) => b.classList.remove("is-active"));
-    btn.classList.add("is-active");
-    gestor.filtro = btn.dataset.filter;
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    handleFilterActive(e.target);
+    const id = e.target.id;
+    if (id === 'btn-todas') gestor.filtro = "todas";
+    if (id === 'btn-pendientes') gestor.filtro = "pendientes";
+    if (id === 'btn-completadas') gestor.filtro = "completadas";
+    if (id === 'btn-ver-todas') gestor.scope = "todas";
+    if (id === 'btn-creadas-mi') gestor.scope = "creadas";
+    if (id === 'btn-asignadas-mi') gestor.scope = "asignadas";
     render();
   });
 });
 
+btnCancelarEdicion.onclick = () => resetForm();
+if ($("#btn-limpiar")) $("#btn-limpiar").onclick = () => resetForm();
+if ($("#btn-borrar-todo")) {
+    $("#btn-borrar-todo").onclick = () => {
+        if(confirm("¿Eliminar todas las tareas?")) {
+            gestor.tareas = [];
+            gestor.guardar();
+            render();
+        }
+    };
+}
 
-$$(".chip[data-scope]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    $$(".chip[data-scope]").forEach((b) => b.classList.remove("is-active"));
-    btn.classList.add("is-active");
-    gestor.scope = btn.dataset.scope;
-    render();
-  });
-});
+if ($("#btn-borrar-todo")) {
+    $("#btn-borrar-todo").onclick = () => {
+        if(confirm("¿Eliminar todas las tareas?")) {
+            gestor.tareas = [];
+            gestor.guardar();
+            render();
+        }
+    };
+}
 
-$("#btn-borrar-todo").addEventListener("click", () => {
-  if (confirm("¿Borrar todo?")) {
-    gestor.tareas = [];
-    gestor.guardar();
-    render();
-  }
-});
 
-$("#btn-limpiar").addEventListener("click", () => {
-  form.reset();
-  if (inputCreado) inputCreado.value = LOGGED_USER;
-});
+if ($("#logoutLink")) {
+  $("#logoutLink").onclick = (e) => {
+    e.preventDefault();
+    localStorage.removeItem("token");
+    redirectToIndex();
+  };
+}
+
 
 render();
