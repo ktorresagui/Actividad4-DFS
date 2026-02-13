@@ -1,143 +1,87 @@
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
 const msg = document.getElementById("msg");
-
-const showRegister = document.getElementById("showRegister");
-const showLogin = document.getElementById("showLogin");
-
-const togglePass = document.getElementById("togglePass");
-const loginPass = document.getElementById("loginPass");
-
-const HIDE_CLASS = "is-hidden";
+const msg2 = document.getElementById("msg2");
 
 if (localStorage.getItem("token")) {
-  location.href = "../../ACT2/pages/tareas.html";
+    location.href = "../../ACT2/pages/tareas.html";
 }
 
-function setMsg(text, type) {
-  if (!msg) return;
-  msg.textContent = text || "";
-  msg.className = "msg" + (type ? ` msg--${type}` : "");
-}
+const mostrarMensaje = (elemento, texto, tipo) => {
+    if (!elemento) return;
+    elemento.textContent = texto;
+    elemento.className = `message msg--${tipo}`;
+};
 
-function setLoading(form, loading) {
-  if (!form) return;
-  const btn = form.querySelector("button[type='submit']");
-  if (!btn) return;
-  btn.disabled = loading;
-  btn.textContent = loading ? "Procesando..." : (form.id === "loginForm" ? "Entrar" : "Registrarme");
-}
-
-function showRegisterView() {
-  setMsg("");
-  if (loginForm) loginForm.classList.add(HIDE_CLASS);
-  if (registerForm) registerForm.classList.remove(HIDE_CLASS);
-}
-
-function showLoginView() {
-  setMsg("");
-  if (registerForm) registerForm.classList.add(HIDE_CLASS);
-  if (loginForm) loginForm.classList.remove(HIDE_CLASS);
-}
-
-if (showRegister) {
-  showRegister.addEventListener("click", (e) => {
+loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    showRegisterView();
-  });
-}
-
-if (showLogin) {
-  showLogin.addEventListener("click", (e) => {
-    e.preventDefault();
-    showLoginView();
-  });
-}
-
-if (togglePass && loginPass) {
-  togglePass.addEventListener("click", () => {
-    const isPass = loginPass.type === "password";
-    loginPass.type = isPass ? "text" : "password";
-    togglePass.textContent = isPass ? "Ocultar" : "Ver";
-  });
-}
-
-if (loginForm) {
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    setMsg("");
-    setLoading(loginForm, true);
-
-    const username = document.getElementById("loginUser")?.value.trim();
-    const password = loginPass?.value;
-
-    if (!username || !password) {
-      setMsg("Completa usuario y contraseña.", "err");
-      setLoading(loginForm, false);
-      return;
-    }
+    const username = document.getElementById("loginUser").value.trim();
+    const password = document.getElementById("loginPass").value;
 
     try {
-      const r = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
+        const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
 
-      const data = await r.json().catch(() => ({}));
+        const data = await res.json();
+        if (!res.ok) return mostrarMensaje(msg, data.error || "Error al entrar", "err");
 
-      if (!r.ok) {
-        setMsg(data.error || "No se pudo iniciar sesión", "err");
-        return;
-      }
-
-      localStorage.setItem("token", data.token);
-      setMsg("Login exitoso. Redirigiendo...", "ok");
-      setTimeout(() => (location.href = "../../ACT2/pages/tareas.html"), 350);
-    } catch {
-      setMsg("Error de red o servidor apagado", "err");
-    } finally {
-      setLoading(loginForm, false);
+        localStorage.setItem("token", data.token);
+        mostrarMensaje(msg, "¡Éxito! Redirigiendo...", "ok");
+        
+        setTimeout(() => {
+            location.href = "../../ACT2/pages/tareas.html";
+        }, 500);
+    } catch (err) {
+        mostrarMensaje(msg, "Error de conexión con el servidor", "err");
     }
-  });
-}
+});
 
-if (registerForm) {
-  registerForm.addEventListener("submit", async (e) => {
+registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setMsg("");
-    setLoading(registerForm, true);
-
-    const username = document.getElementById("regUser")?.value.trim();
-    const password = document.getElementById("regPass")?.value;
-
-    if (!username || !password) {
-      setMsg("Completa usuario y contraseña.", "err");
-      setLoading(registerForm, false);
-      return;
-    }
+    const username = document.getElementById("regUser").value.trim();
+    const password = document.getElementById("regPass").value;
 
     try {
-      const r = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
+        const res = await fetch("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
 
-      const data = await r.json().catch(() => ({}));
+        const data = await res.json();
+        if (!res.ok) return mostrarMensaje(msg2, data.error || "Error al registrar", "err");
 
-      if (!r.ok) {
-        setMsg(data.error || "No se pudo registrar", "err");
-        return;
-      }
+        mostrarMensaje(msg2, "Cuenta creada. ¡Ya puedes entrar!", "ok");
+        registerForm.reset();
 
-      setMsg("Registro exitoso. Ahora inicia sesión.", "ok");
-      registerForm.reset();
-      showLoginView();
-    } catch {
-      setMsg("Error de red o servidor apagado", "err");
-    } finally {
-      setLoading(registerForm, false);
+        setTimeout(() => {
+            registerForm.classList.add("is-hidden");
+            loginForm.classList.remove("is-hidden");
+            mostrarMensaje(msg2, "", ""); 
+        }, 1500);
+    } catch (err) {
+        mostrarMensaje(msg2, "Error al registrar", "err");
     }
-  });
-}
+});
+
+document.getElementById("showRegister").onclick = (e) => {
+    e.preventDefault();
+    loginForm.classList.add("is-hidden");
+    registerForm.classList.remove("is-hidden");
+};
+
+document.getElementById("showLogin").onclick = (e) => {
+    e.preventDefault();
+    registerForm.classList.add("is-hidden");
+    loginForm.classList.remove("is-hidden");
+};
+
+document.getElementById("togglePass").onclick = () => {
+    const input = document.getElementById("loginPass");
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    document.getElementById("togglePass").textContent = isPassword ? "Ocultar" : "Ver";
+};
