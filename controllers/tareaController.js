@@ -4,7 +4,7 @@ const tareasCtrl = {};
 
 tareasCtrl.listar = async (req, res, next) => {
     try {
-        const tareas = await Tarea.find({ usuarioId: req.user.sub }).sort({ createdAt: -1 });
+        const tareas = await Tarea.find({ usuarioId: req.user.sub }).sort({ fechaCreacion: -1 });
         res.json(tareas);
     } catch (err) {
         next(err);
