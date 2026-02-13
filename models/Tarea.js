@@ -7,6 +7,7 @@ const TareaSchema = new mongoose.Schema({
     asignadoA: { type: String },
     estado: { type: String, default: 'pendiente' },
     deadline: { type: Date },
+    fechaCreacion: { type: Date, default: Date.now },
     usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario' }
 }, { timestamps: true });
 
