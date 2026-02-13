@@ -1,1 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Totalplay - Catálogo</title>
+    <link rel="stylesheet" href="../../ACT4/css/productos.css">
+</head>
+<body>
 
+<header class="page-header">
+    <div class="container">
+        <div class="topbar">
+            <a href="index.html" class="brand">
+                <img src="../../ACT1/img/logo.png" alt="Logo de Totalplay" class="logo">
+            </a>
+
+            <input type="checkbox" id="nav-toggle" class="nav-toggle">
+
+            <label for="nav-toggle" class="hamburger" aria-label="Abrir menú">
+                <span></span><span></span><span></span>
+            </label>
+
+            <nav class="nav" aria-label="Menú principal">
+                <ul class="nav-links">
+                    <li><a href="../../index.html">Inicio</a></li>
+                    <li><a href="../../ACT2/pages/tareas.html">Gestor de Tareas</a></li>
+                    <li><a href="../../ACT4/pages/productos.html">Gestor de Productos</a></li>
+                    <li><a href="#" id="logoutLink">Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <div class="header-content">
+            <h1 class="page-title">Gestor de <span class="amarillo">Productos</span></h1>
+            <p class="hero-text">Administración de inventario y catálogo comercial.</p>
+        </div>
+    </div>
+</header>
+
+<main class="page-main">
+    <div class="container">
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2 id="form-title">Registrar Producto</h2>
+                <div class="stats">
+                    <span class="pill">Total: <strong id="stat-total">0</strong></span>
+                </div>
+            </div>
+
+            <form id="form-tarea" class="task-form" autocomplete="off">
+                <div class="field">
+                    <label for="nombre-tarea">Nombre del Producto</label>
+                    <input type="text" id="nombre-tarea" placeholder="Ej: Paquete Total" required>
+                </div>
+
+                <div class="field">
+                    <label for="desc-tarea">Descripción del Producto</label>
+                    <textarea id="desc-tarea" rows="2" placeholder="Breve descripción del servicio o artículo"></textarea>
+                </div>
+
+                <div class="field">
+                    <label for="img-producto">URL del Icono / Imagen</label>
+                    <input type="text" id="img-producto" placeholder="https://ejemplo.com/imagen.png">
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
+                    <div class="field">
+                        <label for="creado-por">Categoría</label>
+                        <input type="text" id="creado-por" placeholder="Ej: Internet" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="asignado-a">Precio ($)</label>
+                        <input type="number" id="asignado-a" step="0.01" placeholder="0.00" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="fecha-limite">Stock disponible</label>
+                        <input type="number" id="fecha-limite" placeholder="Cantidad" required>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn primary" id="btn-agregar">
+                        Agregar Producto
+                    </button>
+                    <button type="button" class="btn danger" id="btn-cancelar-edicion" hidden>
+                        Cancelar edición
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>Inventario de Productos</h2>
+            </div>
+
+            <ul id="lista-tareas" class="task-list"></ul>
+        </section>
+
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <p>&copy; 2026 Totalplay. Todos los derechos reservados.</p>
+    </div>
+</footer>
+
+<script src="../js/productos.js"></script>
+</body>
+</html>
