@@ -69,6 +69,7 @@ const render = () => {
                     <span class="task-name ${t.estado === "completada" ? "is-done" : ""}">${t.nombre}</span>
                 </div>
                 <div class="task-meta">
+                    <span>Creación: <strong>${formatDate(t.fechaCreacion)}</strong></span>
                     <span>Creado por: <strong>${t.creadoPor}</strong></span>
                     <span>Para: <strong>${t.asignadoA || "---"}</strong></span>
                     <span>Límite: <strong style="color:#e74c3c">${formatDate(t.deadline)}</strong></span>
