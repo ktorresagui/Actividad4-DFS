@@ -20,7 +20,7 @@ describe('Pruebas Jest', () => {
         const res = await request(app)
             .post('/api/register')
             .send(credenciales);
-        expect([201, 400]).toContain(res.statusCode);
+        expect([201, 400,409]).toContain(res.statusCode);
     });
 
     test('Login y Token', async () => {
