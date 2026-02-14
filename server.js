@@ -42,13 +42,10 @@ app.post(["/register", "/api/register"], async (req, res, next) => {
     try {
         const { username, password } = req.body || {};
         if (!username || !password) return res.status(400).json({ error: "username y password son requeridos" });
-        
         const existe = await Usuario.findOne({ username });
         if (existe) return res.status(409).json({ error: "Usuario ya existe" });
-
         const hashedPassword = await bcrypt.hash(password, 10);
         await Usuario.create({ username, password: hashedPassword });
-        
         res.status(201).json({ message: "Registro exitoso" });
     } catch (err) {
         next(err);
@@ -59,19 +56,15 @@ app.post(["/login", "/api/login"], async (req, res, next) => {
     try {
         const { username, password } = req.body || {};
         if (!username || !password) return res.status(400).json({ error: "username y password son requeridos" });
-
         const user = await Usuario.findOne({ username });
         if (!user) return res.status(401).json({ error: "Credenciales inválidas" });
-
         const ok = await bcrypt.compare(password, user.password);
         if (!ok) return res.status(401).json({ error: "Credenciales inválidas" });
-
         await Acceso.create({
             usuarioId: user._id,
             username: user.username,
             inicioSesion: new Date()
         });
-
         const token = jwt.sign({ sub: user._id, username: user.username }, JWT_SECRET, { expiresIn: "2h" });
         res.json({ token });
     } catch (err) {
@@ -121,11 +114,16 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "Error interno del servidor" });
 });
 
-(async () => {
-    try {
-        await mongoose.connect(MONGO_URI);
-        app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
-    } catch (err) {
-        console.error("Error crítico:", err);
-    }
-})();
+module.exports = app;
+
+if (require.main === module) {
+    (async () => {
+        try {
+            await mongoose.connect(MONGO_URI);
+            app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
+        } catch (err) {
+            console.error(err);
+            process.exit(1);
+        }
+    })();
+}
