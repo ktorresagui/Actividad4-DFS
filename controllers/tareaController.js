@@ -4,7 +4,7 @@ const tareasCtrl = {};
 
 tareasCtrl.listar = async (req, res, next) => {
     try {
-        const tareas = await Tarea.find({ usuarioId: req.user.sub }).sort({ fechaCreacion: -1 });
+        const tareas = await Tarea.find({ usuarioId: req.user.sub }).sort({ createdAt: -1 });
         res.json(tareas);
     } catch (err) {
         next(err);
@@ -16,7 +16,8 @@ tareasCtrl.crear = async (req, res, next) => {
         const nueva = await Tarea.create({
             ...req.body,
             usuarioId: req.user.sub,
-            creadoPor: req.user.username 
+            creadoPor: req.user.username,
+            fechaCreacion: new Date()
         });
         res.status(201).json(nueva);
     } catch (err) {
@@ -58,3 +59,4 @@ tareasCtrl.eliminarTodo = async (req, res, next) => {
 };
 
 module.exports = tareasCtrl;
+
