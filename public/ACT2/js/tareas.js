@@ -10,8 +10,14 @@ const decodeJwtPayload = (token) => {
 
 const token = getToken();
 if (!token) location.replace("/index.html");
+
 const payload = decodeJwtPayload(token);
 const LOGGED_USER = payload?.username;
+
+if (LOGGED_USER) {
+    const inputCreadoPor = $("#creado-por");
+    if (inputCreadoPor) inputCreadoPor.value = LOGGED_USER;
+}
 
 const form = $("#form-tarea");
 const listaUI = $("#lista-tareas");
@@ -39,7 +45,10 @@ async function api(url, method = 'GET', body = null) {
     };
     if (body) options.body = JSON.stringify(body);
     const res = await fetch(url, options);
-    if (res.status === 401) location.replace("/index.html");
+    if (res.status === 401) {
+        localStorage.removeItem("token");
+        location.replace("/index.html");
+    }
     return res.json();
 }
 
@@ -69,7 +78,7 @@ const render = () => {
                     <span class="task-name ${t.estado === "completada" ? "is-done" : ""}">${t.nombre}</span>
                 </div>
                 <div class="task-meta">
-                    <span>Creación: <strong>${formatDate(t.fechaCreacion)}</strong></span>
+                    <span>Creación: <strong>${formatDate(t.fechaCreacion || t.createdAt)}</strong></span>
                     <span>Creado por: <strong>${t.creadoPor}</strong></span>
                     <span>Para: <strong>${t.asignadoA || "---"}</strong></span>
                     <span>Límite: <strong style="color:#e74c3c">${formatDate(t.deadline)}</strong></span>
@@ -94,10 +103,13 @@ form.onsubmit = async (e) => {
         descripcion: $("#desc-tarea").value,
         asignadoA: $("#asignado-a").value,
         deadline: $("#fecha-limite").value,
+        creadoPor: LOGGED_USER,
+        fechaCreacion: new Date().toISOString(),
         estado: $("#tarea-completa").checked ? "completada" : "pendiente"
     };
 
     if (tareaEditandoId) {
+        delete datos.fechaCreacion; 
         await api(`/api/tareas/${tareaEditandoId}`, 'PUT', datos);
     } else {
         await api('/api/tareas', 'POST', datos);
@@ -144,6 +156,7 @@ $("#btn-borrar-todo").onclick = async () => {
 const resetForm = () => {
     form.reset();
     tareaEditandoId = null;
+    if (LOGGED_USER) $("#creado-por").value = LOGGED_USER;
     btnAgregar.textContent = "Agregar Tarea";
     btnCancelarEdicion.hidden = true;
 };
@@ -164,7 +177,11 @@ document.querySelectorAll('.chip').forEach(btn => {
     };
 });
 
-$("#logoutLink").onclick = () => { localStorage.removeItem("token"); location.replace("/"); };
+$("#logoutLink").onclick = () => { 
+    localStorage.removeItem("token"); 
+    location.replace("/index.html"); 
+};
+
 btnCancelarEdicion.onclick = resetForm;
 $("#btn-limpiar").onclick = resetForm;
 
