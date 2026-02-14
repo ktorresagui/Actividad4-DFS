@@ -1,31 +1,29 @@
 {
-  "name": "pagina-personal-(empresarial)",
+  "name": "pagina-personal-empresarial",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "jest --verbose --detectOpenHandles --forceExit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "body-parser": "^2.2.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
     "dotenv": "^16.4.7",
-    "mongoose": "8.0.0"
-    
+    "mongoose": "8.0.0",
+    "cors": "^2.8.5"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ktorresagui/Actividad3-DFS.git"
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
   },
-  "bugs": {
-    "url": "https://github.com/ktorresagui/Actividad3-DFS/issues"
-  },
-  "homepage": "https://github.com/ktorresagui/Actividad3-DFS#readme",
-  "description": ""
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
+  }
 }
