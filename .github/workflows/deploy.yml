@@ -1,38 +1,33 @@
-name: CI/CD - Deploy to Render
+name: CI/CD Pipeline Empresarial
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  ci_cd:
+  test-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Run tests (optional)
-        run: npm test --if-present
-
-      - name: Lint (optional)
-        run: npm run lint --if-present
-
-      - name: Trigger Render Deploy Hook
+      - name: Run tests
+        run: npm test
         env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Deploy to Render
+        if: github.ref == 'refs/heads/main' && success()
         run: |
-          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "Falta configurar el secret RENDER_DEPLOY_HOOK"
-            exit 1
-          fi
-          curl -X POST "$RENDER_DEPLOY_HOOK"
+          curl ${{ secrets.RENDER_DEPLOY_HOOK }}
